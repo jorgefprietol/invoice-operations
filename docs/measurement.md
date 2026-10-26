@@ -14,4 +14,4 @@ La reducción de tiempo se calcula como `(tiempo_base - tiempo_nuevo) / tiempo_b
 
 `python -m app metrics` mide transacciones locales únicas y latencia p50/p95 dentro del proceso. Incluye espera de base de datos y llamadas síncronas a proveedores; excluye transporte HTTP del cliente, fallos y respuestas reutilizadas. No representa tiempo humano, precisión documental ni ahorro de negocio.
 
-Las métricas de los trabajos de consultoría pertenecen a sus entornos de producción y sus registros son confidenciales. Este repositorio documenta la metodología de medición y las verificaciones de la implementación pública, sin incorporar datos internos del cliente. Los ejemplos y las pruebas públicas son sintéticos; los datos productivos y documentos fuente permanecen fuera de Git.
+Este repositorio documenta la metodología de medición y las verificaciones locales. Los ejemplos y las pruebas usan datos sintéticos; sus resultados describen únicamente la implementación y el entorno evaluados. Para una comparación operativa, registra la línea base, la muestra y el periodo de medición con datos autorizados y anonimizados.
