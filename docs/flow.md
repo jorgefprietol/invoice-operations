@@ -13,6 +13,7 @@ La recepción valida y clasifica documentos antes de crear la salida ERP. La con
 ```mermaid
 flowchart TD
   subgraph Intake["Recepción y entrega"]
+    direction TB
     Input["Texto OCR y clave de idempotencia"] --> Repeat{"¿Solicitud completada?"}
     Repeat -->|Sí| Replay["Devolver resultado persistido"]
     Repeat -->|No| Extract["Extraer por claves o LLM"]
@@ -31,6 +32,7 @@ flowchart TD
     External -. "recibo verificable" .-> Receipt["Confirmar y marcar exportada"]
   end
   subgraph Consultation["Consulta documental"]
+    direction TB
     Question["Pregunta acotada"] --> Scope["Filtrar estados y referencia exacta"]
     Scope --> Rank["Recuperar fuentes con TF-IDF"]
     Rank --> Evidence{"¿Evidencia suficiente?"}
