@@ -2,6 +2,10 @@
 
 Servicio de recepción, consulta y control de facturas. Convierte texto OCR en campos estructurados, valida importes con aritmética decimal y retiene inconsistencias para revisión antes de generar una salida hacia ERP. La consulta documental recupera registros normalizados con citas y versiones; puede incorporar un LLM mediante Ollama.
 
+## Contexto y confidencialidad
+
+Este caso de uso forma parte de mi experiencia en soluciones implementadas en producción durante trabajos de consultoría. La versión pública es una implementación independiente con datos sintéticos que permite revisar la arquitectura, los flujos y los controles. Por confidencialidad, no se incluyen la identidad del cliente, su código ni sus registros operativos.
+
 El flujo separa extracción, decisión contable y entrega. Una respuesta del extractor nunca equivale a una aprobación.
 
 [Diseño de arquitectura](docs/architecture.md) · [Flujos diagramados](docs/flow.md) · [Tecnologías utilizadas](docs/technologies.md)
