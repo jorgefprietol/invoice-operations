@@ -6,9 +6,10 @@ import re
 import uuid
 from datetime import date
 from decimal import Decimal, InvalidOperation
+from . import retrieval
 
 TITLE = "Invoice Operations"
-DESCRIPTION = "Recepción de texto OCR, validación contable y salida controlada hacia ERP."
+DESCRIPTION = "Extracción y validación de facturas, consulta documental con citas y salida controlada hacia ERP."
 DEMO = {"action": "ingest", "ocr_text": "supplier_tax_id: DEMO-179001\ndocument_number: F-2026-0042\nissue_date: 2026-10-26\ncurrency: USD\nsubtotal: 125.00\ntax: 18.75\ntotal: 143.75"}
 
 FIELDS = ("supplier_tax_id", "document_number", "issue_date", "currency", "subtotal", "tax", "total")
@@ -19,6 +20,14 @@ ALIASES = {"ruc": "supplier_tax_id", "proveedor": "supplier_tax_id", "factura": 
 def _schema(store):
     store.connection.execute("CREATE TABLE IF NOT EXISTS invoices (id TEXT PRIMARY KEY, supplier TEXT, number TEXT, fingerprint TEXT, content TEXT NOT NULL, state TEXT NOT NULL, reasons TEXT NOT NULL, UNIQUE(supplier, number))")
     store.connection.execute("CREATE TABLE IF NOT EXISTS erp_outbox (id TEXT PRIMARY KEY, invoice_id TEXT UNIQUE NOT NULL, payload TEXT NOT NULL, state TEXT NOT NULL DEFAULT 'pending', receipt TEXT)")
+    retrieval.ensure_schema(store.connection)
+    for row in store.connection.execute("SELECT i.* FROM invoices i LEFT JOIN invoice_sources s ON i.id=s.document_id WHERE s.document_id IS NULL").fetchall():
+        retrieval.index_invoice(store.connection, row["id"], row["state"], json.loads(row["content"]))
+
+
+def _index(store, invoice_id):
+    row = store.connection.execute("SELECT * FROM invoices WHERE id=?", (invoice_id,)).fetchone()
+    retrieval.index_invoice(store.connection, invoice_id, row["state"], json.loads(row["content"]))
 
 
 def _money(value):
@@ -73,6 +82,8 @@ def process(payload, store):
     action = payload.get("action", "ingest")
     if not isinstance(action, str):
         raise ValueError("action debe ser texto")
+    if action == "query":
+        return retrieval.query(payload, store)
     if action == "ingest":
         text = payload.get("ocr_text")
         if not isinstance(text, str) or not text.strip() or len(text) > 100_000:
@@ -113,6 +124,7 @@ def process(payload, store):
         invoice_id = str(uuid.uuid4())
         state = "manual_review" if reasons else "validated"
         store.connection.execute("INSERT INTO invoices VALUES (?,?,?,?,?,?,?)", (invoice_id, supplier, number, fingerprint, json.dumps(fields), state, json.dumps(reasons)))
+        _index(store, invoice_id)
         if not reasons:
             _enqueue(store, invoice_id, fields)
         store.event("invoice_received", {"document_id": invoice_id, "state": state, "reason_count": len(reasons), "extraction_method": "model" if payload.get("use_model") is True else "key_value"})
@@ -148,6 +160,7 @@ def process(payload, store):
             raise ValueError("decision debe ser approve o reject")
         fingerprint = hashlib.sha256(json.dumps(fields, sort_keys=True).encode()).hexdigest()
         store.connection.execute("UPDATE invoices SET supplier=?, number=?, content=?, fingerprint=?, state=?, reasons='[]' WHERE id=?", (fields.get("supplier_tax_id") or None, fields.get("document_number") or None, json.dumps(fields), fingerprint, state, invoice_id))
+        _index(store, invoice_id)
         store.event("invoice_reviewed", {"document_id": invoice_id, "state": state, "reviewer": reviewer[:80], "reason": reason[:300]})
         return {"document_id": invoice_id, "state": state, "fields": fields, "review_reasons": []}
     if action == "export":
@@ -166,6 +179,7 @@ def process(payload, store):
             raise ValueError("La salida ya tiene otra confirmación")
         store.connection.execute("UPDATE erp_outbox SET state='delivered', receipt=? WHERE id=?", (receipt, row["id"]))
         store.connection.execute("UPDATE invoices SET state='exported' WHERE id=?", (row["invoice_id"],))
+        _index(store, row["invoice_id"])
         store.event("invoice_export_acknowledged", {"document_id": row["invoice_id"], "outbox_id": row["id"]})
         return {"document_id": row["invoice_id"], "state": "exported", "receipt": receipt}
     raise ValueError("Acción desconocida")

@@ -1,0 +1,16 @@
+flowchart TB
+  Capture["Captura y OCR externo"] -. "texto ya extraído" .-> API["API REST autenticada"]
+  Client["Consola o integrador"] --> API
+  N8N["Workflow n8n importable"] -. "POST JSON" .-> API
+  API --> Runtime["Idempotencia y transacción"]
+  Runtime --> Extract["Extracción por claves o LLM"]
+  Extract --> Validate["Validación decimal y revisión"]
+  Runtime --> Search["Recuperación TF-IDF y citas"]
+  Extract -. "opcional" .-> Ollama["Ollama API"]
+  Search -. "selección de fuentes opcional" .-> Ollama
+  Validate --> DB[("SQLite: facturas, fuentes, outbox y auditoría")]
+  Search --> DB
+  Search --> Answer["Extractos verificables o abstención"]
+  DB --> Export["Lectura del outbox"]
+  Export -. "conector pendiente" .-> ERP["ERP externo"]
+  ERP -. "recibo verificable" .-> API

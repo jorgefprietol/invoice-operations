@@ -1,5 +1,13 @@
 # Operación
 
+## Consulta de facturas
+
+Carga `data/ingest.json` con `python -m app run --input data/ingest.json --key invoice-example-001` y consulta `data/query.json` con otra clave. Ambos comandos usan `var/service.db`; la demo CLI de una sola llamada usa una base temporal y no deja datos para consultas posteriores.
+
+Las correcciones actualizan la instantánea y el número de versión del índice dentro de la transacción de revisión. Sólo se conserva la versión actual en `invoice_sources`; las respuestas de solicitudes anteriores pueden incluir extractos históricos. Aplica la política de retención también a `requests`, auditoría y copias, no sólo al índice.
+
+Para consultar con modelo configura `MODEL_BACKEND=ollama`, `OLLAMA_MODEL` y `OLLAMA_URL`, y envía `use_model:true`. Una respuesta inválida del proveedor revierte la consulta; nunca cambia la factura ni la salida ERP. El servicio local representa una organización: no reutilices su token o base para organizaciones que deban estar aisladas.
+
 Antes de una carga, compruebe `/health`, el token de acceso y el volumen persistente. Conserve una clave de idempotencia por solicitud y no cambie el cuerpo durante un reintento.
 
 Si una factura queda en `manual_review`, contraste los campos contra el documento fuente. `review_reasons` identifica campos ausentes, formato inválido o diferencia contable. Para aprobar, envíe las correcciones junto con revisor y motivo; no altere directamente las tablas.
