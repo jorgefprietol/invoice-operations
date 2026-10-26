@@ -1,0 +1,8 @@
+{
+  "action": "review",
+  "document_id": "REEMPLAZAR_POR_ID_RECIBIDO",
+  "decision": "approve",
+  "reviewer": "finance-demo-01",
+  "reason": "Importe contrastado con el documento fuente sintético",
+  "corrections": {"total": "143.75"}
+}
